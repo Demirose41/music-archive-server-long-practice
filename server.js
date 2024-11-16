@@ -67,7 +67,53 @@ const server = http.createServer((req, res) => {
 
     /* ========================== ROUTE HANDLERS ========================== */
 
-    // Your code here
+    let urlParts = req.url.split("/")
+
+    //"Get all articles"
+    if(req.method === "GET" && req.url === "/artists"){
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json")
+      res.body = JSON.stringify(artists)
+      res.end(res.body);
+      return;
+    }
+
+    // Get a specific artist's detatils based on artist ID
+    if(req.method === "GET" && req.url.startsWith("/artists") && urlParts.length === 3){
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json")
+      if(!artists[urlParts[2]]){
+        res.statusCode = 400;
+        res.write("artist not found")
+        return res.end(); 
+      }
+      let artist = artists[urlParts[2]];
+      let artistAlbums = []
+      for ( const [id, album] of Object.entries(albums) ){
+        if(album.artistId === Number(urlParts[2])) {
+          artistAlbums.push(album)
+        }
+      }
+      artist["albums"] = artistAlbums;
+      res.body = JSON.stringify(artists[urlParts[2]])
+      res.end(res.body)
+      return;
+    }
+
+    if(req.method === "POST" && req.url === "/artists"){
+      const newArtistId = getNewArtistId()
+      const newArtistName = req.body.name ;
+      artists[newArtistId] = 
+      {
+        artistId: newArtistId,
+        name: newArtistName
+      }
+
+      res.statusCode = 201;
+      res.setHeader("Content-Type", "application/json")
+      res.body = artists[newArtistId]
+      return res.end(JSON.stringify(res.body));
+    }
 
     res.statusCode = 404;
     res.setHeader('Content-Type', 'application/json');
