@@ -56,6 +56,27 @@ function getSongsByAlbum(albumId){
   return albumSongs
 }
 
+// returns songs with a given artistsId
+function getSongsByArtist(artistId){
+  let artistSongs = [];
+  const artistAlbums = getAlbumsByArtist(artistId).map((album)=> album.albumId)
+  for( const albumId of artistAlbums) {
+    artistSongs = [...artistSongs, getSongsByAlbum(albumId)]
+  }
+  return artistSongs
+}
+
+// Returns songs of a given track number
+function getSongsByTracknumber(tracknumber){
+  const foundSongs = [];
+  for( const [id, song] of Object.entries(songs) ){
+    if(song.trackNumber === Number(tracknumber)){
+      foundSongs.push(song)
+    }
+  }
+  return foundSongs
+}
+
 /* ======================= PROCESS SERVER REQUESTS ======================= */
 const server = http.createServer((req, res) => {
   console.log(`${req.method} ${req.url}`);
@@ -164,7 +185,7 @@ const server = http.createServer((req, res) => {
     }
 
     //6. Get all albums of a specific artist based on artist Id
-    if(req.method === "GET" && req.url.startsWith("/artists")
+    if(req.method === "GET" && req.url.startsWith("/artists") && req.url.endsWith("/albums")
     && urlParts.length === 4){
       const artistId = urlParts[2]
       if(artists[artistId]){
@@ -251,6 +272,80 @@ const server = http.createServer((req, res) => {
       res.statusCode = 200;
       res.setHeader("Content-Type","application/json")
       res.end("Successfully deleted")
+      return
+    }
+
+    //11. Get all songs of a specific artist based on artistId
+    if (req.method === "GET" && req.url.startsWith("/artists") && req.url.endsWith("/songs")
+      && urlParts.length === 4){
+      const artistId = urlParts[2];
+      if(!artists[artistId]) { res.statusCode = 422; return res.end()}
+
+      const artistsSongs = getSongsByArtist(artistId);
+      res.statusCode = 200;
+      res.setHeader("Content-Type","application/json")
+      res.body = artistsSongs;
+      res.end(JSON.stringify(res.body))
+      return;
+    }
+
+    //12. Get all songs of a specific album based on albumId
+    if (req.method === "GET" && req.url.startsWith("/albums/") && req.url.endsWith("/songs") 
+      && urlParts.length === 4){
+      const albumId = urlParts[2]
+        if(!albums[albumId]) { res.statusCode = 422; return res.end()}
+
+        const albumSongs = getSongsByAlbum(albumId);
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type","application/json")
+
+        res.body = albumSongs;
+        res.end(JSON.stringify(res.body));
+        return;
+      }
+
+    //13. Get all songs of a specified trackNumber
+    if (req.method === "GET" && req.url.startsWith("/trackNumbers/") && urlParts.length === 4){
+      const tracknumber = urlParts[2];
+
+      const foundSongs = getSongsByTracknumber(tracknumber);
+      res.statusCode = 200;
+      res.setHeader("Content-Type","application/json")
+      res.body = foundSongs;
+      res.end(JSON.stringify(res.body));
+      return;
+    }
+
+    //14. Get a specific song's details based on songId
+    if (req.method === "GET" && req.url.startsWith("/songs") && urlParts.length === 3) {
+      const songId = urlParts[2]
+      if(!songs[songId]) { res.statusCode = 422; return res.end()}
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type","application/json")
+      res.body = songs[songId];
+      res.end(JSON.stringify(res.body))
+      return
+    }
+
+    //15. Add a song to a specific album based on albumId
+    if (req.method === "POST" && req.url.startsWith("/albums/") && req.url.endsWith("/songs")
+    && urlParts.length === 4){
+      const albumId = urlParts[2];
+      if(!albums[albumId]) { res.statusCode = 422; return res.end()}
+      const newSongId = getNewSongId();
+      songs[newSongId] = {
+        "name" : req.body.name,
+        "lyrics" : req.body.lyrics,
+        "trackNumber" : req.body.trackNumber,
+        "songId": newSongId,
+        "albumId": Number(albumId)
+      }
+      res.statusCode = 201;
+      res.setHeader("Content-Type","application/json");
+      res.body = songs[newSongId]
+      res.end(JSON.stringify(res.body))
       return
     }
 
