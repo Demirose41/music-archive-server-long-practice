@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const { url } = require('inspector');
 
 /* ============================ SERVER DATA ============================ */
 let artists = JSON.parse(fs.readFileSync('./seeds/artists.json'));
@@ -69,7 +70,7 @@ const server = http.createServer((req, res) => {
 
     let urlParts = req.url.split("/")
 
-    //"Get all articles"
+    // 1. Get all articles
     if(req.method === "GET" && req.url === "/artists"){
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json")
@@ -78,7 +79,7 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // Get a specific artist's detatils based on artist ID
+    // 2. Get a specific artist's detatils based on artist ID
     if(req.method === "GET" && req.url.startsWith("/artists") && urlParts.length === 3){
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json")
@@ -99,7 +100,7 @@ const server = http.createServer((req, res) => {
       res.end(res.body)
       return;
     }
-
+    // 3. Add an Artist
     if(req.method === "POST" && req.url === "/artists"){
       const newArtistId = getNewArtistId()
       const newArtistName = req.body.name ;
@@ -114,7 +115,36 @@ const server = http.createServer((req, res) => {
       res.body = artists[newArtistId]
       return res.end(JSON.stringify(res.body));
     }
+    // 4. Edit a specified artist by artistId
+    if((req.method === "PATCH" || req.method === "PUT") && req.url.startsWith("/artists")
+      && urlParts.length === 3){
+      if(req.body.name){
+        const currentArtistId = urlParts[2];
+        let currentArtist = artists[currentArtistId];
 
+        if(currentArtist){
+          currentArtist.name = req.body.name;
+          res.statusCode = 200;
+          res.setHeader("Content-Type","application/json")
+          res.body = currentArtist
+          res.end(JSON.stringify(res.body));
+          return
+        }
+      }
+    }
+    //5. Delete a specified artist by artistId
+    if(req.method === "DELETE" && req.url.startsWith("/artists")
+    && urlParts.length === 3){
+      const artistId = urlParts[2];
+      if(artists[artistId]){
+        delete artists[artistId];
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        console.log(artists)
+        res.end("Sucessfully deleted")
+        return
+      }
+    }
     res.statusCode = 404;
     res.setHeader('Content-Type', 'application/json');
     res.write("Endpoint not found");
