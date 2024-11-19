@@ -349,7 +349,32 @@ const server = http.createServer((req, res) => {
       return
     }
 
+    //16. Edit a specified song by songId
+    if((req.method === "PUT" || req.method === "PATCH") && req.url.startsWith("/songs")
+    && urlParts.length === 3){
+      const songId = urlParts[2];
+      if(!songs[songId]) {res.statusCode = 422; return res.end()}
+      let targetSong = songs[songId]
+      if(req.body.name) targetSong.name = req.body.name
+      if(req.body.lyrics) targetSong.lyrics = req.body.lyrics
+      if(req.body.trackNumber) targetSong.trackNumber = req.body.trackNumber
+      res.statusCode = 200;
+      res.setHeader("Content-Type","application/json")
+      res.body = targetSong;
+      res.end(JSON.stringify(res.body))
+      return 
+    }
     
+    //17. Delete a specified song by songId
+    if(req.method === "DELETE" && req.url.startsWith("/songs/") && urlParts.length === 3){
+      const songId = urlParts[2]
+      if(!songs[songId]) { res.statusCode = 422; return res.end() }
+      delete songs[songId]
+      res.statusCode = 200;
+      res.setHeader("Content-Type","application/json")
+      res.end("SUCCESSFULLY DELETED")
+      return
+    }
 
     // Error Catch
     res.statusCode = 404;
